@@ -552,7 +552,7 @@
     function openCommentPanel(messageId, messageText) {
       currentMessageId = messageId;
       commentTitle.textContent = '0 条评论'; // Initial state
-      commentSubtitle.textContent = `"${messageText.substring(0, 50)}${messageText.length > 50 ? '...' : ''}"`;
+      commentSubtitle.textContent = `"${messageText.substring(0, 500)}${messageText.length > 500 ? '...' : ''}"`;
       commentPanel.classList.add('open');
       panelOverlay.classList.add('open');
       loadComments(messageId);
