@@ -3,25 +3,256 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>OMG Wall — Anonymous Shared Messages</title>
-<body style="font-family:sans-serif;padding:20px;max-width:720px;margin:0 auto;line-height:1.4">
-  <h2 style="margin:0 0 8px">OMG Wall</h2>
-  <p style="margin:0 0 20px;color:#555">A totally anonymous, real-time message board. No login. Messages persist.</p>
+<style>
+  @keyframes bubblePop {
+    0% { transform: scale(0) rotate(0deg); opacity: 0; }
+    50% { transform: scale(1.1) rotate(5deg); opacity: 0.8; }
+    100% { transform: scale(1) rotate(0deg); opacity: 1; }
+  }
+  
+  @keyframes carouselUp {
+    0% { transform: translateY(100vh); }
+    100% { transform: translateY(-100vh); }
+  }
+  
+  @keyframes carouselDown {
+    0% { transform: translateY(-100vh); }
+    100% { transform: translateY(100vh); }
+  }
+  
+  .message-bubble {
+    animation: bubblePop 0.6s ease-out;
+    border-radius: 20px;
+    padding: 12px 16px;
+    margin: 8px;
+    max-width: 45%;
+    word-wrap: break-word;
+    position: absolute;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    transition: all 0.3s ease;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  
+  .message-bubble:hover {
+    transform: scale(1.02);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  }
+  
+  .message-bubble:nth-child(odd) {
+    background: white;
+    color: #333;
+    left: 5%;
+    border: 1px solid #e0e0e0;
+    animation: bubblePop 0.6s ease-out, carouselUp 20s linear infinite 0.6s;
+  }
+  
+  .message-bubble:nth-child(even) {
+    background: white;
+    color: #333;
+    right: 5%;
+    border: 1px solid #e0e0e0;
+    animation: bubblePop 0.6s ease-out, carouselDown 20s linear infinite 0.6s;
+  }
+  
+  .message-bubble:nth-child(3n) {
+    background: white;
+    color: #333;
+    left: 5%;
+    border: 1px solid #e0e0e0;
+    animation: bubblePop 0.6s ease-out, carouselUp 25s linear infinite 0.6s;
+  }
+  
+  .message-bubble:nth-child(4n) {
+    background: white;
+    color: #333;
+    right: 5%;
+    border: 1px solid #e0e0e0;
+    animation: bubblePop 0.6s ease-out, carouselDown 25s linear infinite 0.6s;
+  }
+  
+  .message-bubble:nth-child(5n) {
+    background: white;
+    color: #333;
+    left: 5%;
+    border: 1px solid #e0e0e0;
+    animation: bubblePop 0.6s ease-out, carouselUp 30s linear infinite 0.6s;
+  }
+  
+  .message-text {
+    font-weight: 500;
+    line-height: 1.4;
+    margin-bottom: 4px;
+  }
+  
+  .message-time {
+    font-size: 11px;
+    opacity: 0.8;
+    font-weight: 300;
+  }
+  
+  .input-container {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.9) 100%);
+    backdrop-filter: blur(20px);
+    border-top: 2px solid rgba(102, 126, 234, 0.2);
+    padding: 24px 20px;
+    box-shadow: 0 -8px 32px rgba(0,0,0,0.15);
+    z-index: 1000;
+  }
+  
+  .input-form {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    max-width: 800px;
+    margin: 0 auto;
+  }
+  
+  .input-wrapper {
+    display: flex;
+    align-items: center;
+    border: 3px solid rgba(102, 126, 234, 0.3);
+    border-radius: 30px;
+    padding: 16px 24px;
+    flex: 1;
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(10px);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 4px 20px rgba(102, 126, 234, 0.1);
+  }
+  
+  .input-wrapper:focus-within {
+    border-color: #667eea;
+    box-shadow: 0 8px 32px rgba(102, 126, 234, 0.2);
+    transform: translateY(-2px);
+  }
+  
+  .omg-prefix {
+    font-weight: 800;
+    color: #d00;
+    margin-right: 12px;
+    white-space: nowrap;
+    font-size: 25px;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+  }
+  
+  .message-input {
+    border: 0;
+    outline: 0;
+    flex: 1;
+    font-size: 18px;
+    background: transparent;
+    color: #333;
+    font-weight: 500;
+  }
+  
+  .message-input::placeholder {
+    color: #999;
+    font-weight: 400;
+  }
+  
+  .send-button {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: 0;
+    border-radius: 30px;
+    padding: 16px 28px;
+    font-weight: 700;
+    font-size: 16px;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 4px 20px rgba(102, 126, 234, 0.3);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  
+  .send-button:hover {
+    transform: translateY(-2px) scale(1.05);
+    box-shadow: 0 8px 32px rgba(102, 126, 234, 0.4);
+  }
+  
+  .send-button:active {
+    transform: translateY(0) scale(0.98);
+  }
+  
+  .send-button:disabled {
+    opacity: 0.6;
+    transform: none;
+    box-shadow: 0 2px 10px rgba(102, 126, 234, 0.2);
+  }
+  
+  .feed-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 100px;
+    overflow: hidden;
+    pointer-events: none;
+  }
+  
+  #feed {
+    position: relative;
+    width: 100%;
+    height: 100%;
+  }
+  
+  .header {
+    text-align: center;
+    padding: 20px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    margin-bottom: 20px;
+  }
+  
+  .header h2 {
+    margin: 0 0 8px;
+    font-size: 28px;
+    font-weight: 700;
+  }
+  
+  .header p {
+    margin: 0;
+    opacity: 0.9;
+    font-size: 14px;
+  }
+  
+  body {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+    min-height: 100vh;
+    margin: 0;
+    font-family: sans-serif;
+  }
+</style>
+<body>
+  <div class="header">
+    <h2>卧槽bot</h2>
+    <p>A totally anonymous, real-time message board. No login. Messages persist.</p>
+  </div>
 
-  <form id="msg-form" style="display:flex;gap:8px;align-items:center;margin-bottom:16px">
-    <div style="display:flex;align-items:center;border:1px solid #ddd;border-radius:8px;padding:8px 10px;flex:1;background:#fff">
-      <span aria-hidden="true" style="font-weight:600;color:#d00;margin-right:6px;white-space:nowrap">OMG</span>
-      <input id="msg-input" type="text" autocomplete="off" placeholder="Type your message…"
-        style="border:0;outline:0;flex:1;font-size:16px" />
-    </div>
-    <button id="send-btn" type="submit" style="background:#111;color:#fff;border:0;border-radius:8px;padding:10px 14px;font-weight:600;cursor:pointer">Send</button>
-  </form>
+  <div class="feed-container">
+    <div id="feed" aria-live="polite" aria-busy="true"></div>
+  </div>
 
-  <div id="feed" aria-live="polite" aria-busy="true" style="display:flex;flex-direction:column;gap:10px"></div>
+  <div class="input-container">
+    <form id="msg-form" class="input-form">
+      <div class="input-wrapper">
+        <span class="omg-prefix" aria-hidden="true">卧槽</span>
+        <input id="msg-input" type="text" autocomplete="off" placeholder="我跟你说…" class="message-input" />
+      </div>
+      <button id="send-btn" type="submit" class="send-button">Send</button>
+    </form>
+  </div>
 
   <template id="msg-item-template">
-    <div style="border:1px solid #eee;border-radius:10px;padding:10px 12px;background:#fafafa">
-      <div class="text" style="white-space:pre-wrap;word-wrap:break-word"></div>
-      <div class="meta" style="color:#888;font-size:12px;margin-top:6px"></div>
+    <div class="message-bubble">
+      <div class="message-text"></div>
+      <div class="message-time"></div>
     </div>
   </template>
 
@@ -62,7 +293,7 @@
       ev.preventDefault();
       const raw = (input.value || '').trim();
       if (!raw) return;
-      const text = `OMG ${raw}`;
+      const text = `卧槽 ${raw}`;
       input.disabled = true;
       sendBtn.disabled = true;
       try {
@@ -89,11 +320,17 @@
     onSnapshot(q, { includeMetadataChanges: true }, (snapshot) => {
       feed.setAttribute('aria-busy', 'false');
       feed.innerHTML = '';
-      snapshot.forEach((doc) => {
+      snapshot.forEach((doc, index) => {
         const data = doc.data();
         const node = template.content.cloneNode(true);
-        node.querySelector('.text').textContent = data.text || '';
-        node.querySelector('.meta').textContent = formatTimestamp(data.createdAt);
+        node.querySelector('.message-text').textContent = data.text || '';
+        node.querySelector('.message-time').textContent = formatTimestamp(data.createdAt);
+        
+        // Add staggered delay for carousel effect
+        const bubble = node.querySelector('.message-bubble');
+        const delay = (index * 0.5) % 20; // Stagger messages by 0.5s, cycle every 20s
+        bubble.style.animationDelay = `0.6s, ${delay}s`;
+        
         feed.appendChild(node);
       });
     }, (error) => {
