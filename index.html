@@ -20,8 +20,17 @@
     100% { transform: translateY(100vh); }
   }
   
+  @keyframes carouselUpSlow {
+    0% { transform: translateY(100vh); }
+    100% { transform: translateY(-100vh); }
+  }
+  
+  @keyframes carouselDownSlow {
+    0% { transform: translateY(-100vh); }
+    100% { transform: translateY(100vh); }
+  }
+  
   .message-bubble {
-    animation: bubblePop 0.6s ease-out;
     border-radius: 20px;
     padding: 12px 16px;
     margin: 8px;
@@ -30,9 +39,10 @@
     position: absolute;
     box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     transition: all 0.3s ease;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    white-space: normal;
+    overflow: visible;
+    min-height: 40px;
+    line-height: 1.4;
   }
   
   .message-bubble:hover {
@@ -50,7 +60,7 @@
     color: #333;
     left: 5%;
     border: 1px solid #e0e0e0;
-    animation: bubblePop 0.6s ease-out, carouselUp 20s linear infinite 0.6s;
+    animation: carouselUp 15s linear infinite;
   }
   
   .message-bubble:nth-child(even) {
@@ -58,7 +68,7 @@
     color: #333;
     right: 5%;
     border: 1px solid #e0e0e0;
-    animation: bubblePop 0.6s ease-out, carouselDown 20s linear infinite 0.6s;
+    animation: carouselDown 18s linear infinite;
   }
   
   .message-bubble:nth-child(3n) {
@@ -66,7 +76,7 @@
     color: #333;
     left: 5%;
     border: 1px solid #e0e0e0;
-    animation: bubblePop 0.6s ease-out, carouselUp 25s linear infinite 0.6s;
+    animation: carouselUpSlow 22s linear infinite;
   }
   
   .message-bubble:nth-child(4n) {
@@ -74,7 +84,7 @@
     color: #333;
     right: 5%;
     border: 1px solid #e0e0e0;
-    animation: bubblePop 0.6s ease-out, carouselDown 25s linear infinite 0.6s;
+    animation: carouselDownSlow 25s linear infinite;
   }
   
   .message-bubble:nth-child(5n) {
@@ -82,7 +92,15 @@
     color: #333;
     left: 5%;
     border: 1px solid #e0e0e0;
-    animation: bubblePop 0.6s ease-out, carouselUp 30s linear infinite 0.6s;
+    animation: carouselUp 20s linear infinite;
+  }
+  
+  .message-bubble:nth-child(6n) {
+    background: white;
+    color: #333;
+    right: 5%;
+    border: 1px solid #e0e0e0;
+    animation: carouselDown 16s linear infinite;
   }
   
   .message-text {
@@ -638,22 +656,38 @@
 
     // Real-time feed (ordered oldest -> newest)
     const q = query(collection(db, 'messages'), orderBy('createdAt', 'asc'));
+    let messageElements = new Map(); // Track existing messages to avoid recreating
+    const MAX_VISIBLE_MESSAGES = 20; // Limit visible messages to prevent overlap
+    
     onSnapshot(q, { includeMetadataChanges: true }, (snapshot) => {
       feed.setAttribute('aria-busy', 'false');
+      
+      // Get all messages and only show the most recent ones
+      const allMessages = [];
+      snapshot.forEach((doc) => {
+        allMessages.push({ id: doc.id, data: doc.data() });
+      });
+      
+      // Sort by creation time and take only the most recent
+      const recentMessages = allMessages.slice(-MAX_VISIBLE_MESSAGES);
+      
+      // Clear feed and rebuild with limited messages
       feed.innerHTML = '';
-      snapshot.forEach((doc, index) => {
-        const data = doc.data();
+      messageElements.clear();
+      
+      recentMessages.forEach((message, index) => {
+        const data = message.data;
         const node = template.content.cloneNode(true);
         node.querySelector('.message-text').textContent = data.text || '';
         node.querySelector('.message-time').textContent = formatTimestamp(data.createdAt);
         
         // Add staggered delay for carousel effect
         const bubble = node.querySelector('.message-bubble');
-        const delay = (index * 0.5) % 20; // Stagger messages by 0.5s, cycle every 20s
-        bubble.style.animationDelay = `0.6s, ${delay}s`;
+        const delay = (index * 0.5) % 30; // Increased stagger to prevent overlap
+        bubble.style.animationDelay = `${delay}s`;
         
         // Add click handler for comments
-        bubble.setAttribute('data-message-id', doc.id);
+        bubble.setAttribute('data-message-id', message.id);
         bubble.style.cursor = 'pointer';
         bubble.style.pointerEvents = 'auto';
         bubble.title = 'Click to add comments';
@@ -661,15 +695,15 @@
         bubble.addEventListener('click', (e) => {
           e.preventDefault();
           e.stopPropagation();
-          console.log('Bubble clicked:', doc.id); // Debug log
-          
+          console.log('Bubble clicked:', message.id); // Debug log
+            
           // Add visual feedback
           bubble.style.transform = 'scale(0.95)';
           bubble.style.transition = 'transform 0.1s ease';
-          
+            
           setTimeout(() => {
             bubble.style.transform = '';
-            openCommentPanel(doc.id, data.text || '');
+            openCommentPanel(message.id, data.text || '');
           }, 100);
         });
         
@@ -684,6 +718,7 @@
         });
         
         feed.appendChild(node);
+        messageElements.set(message.id, node);
       });
     }, (error) => {
       console.error('Realtime listener error:', error);
