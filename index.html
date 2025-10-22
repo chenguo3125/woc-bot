@@ -503,7 +503,7 @@
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
-    import { initializeFirestore, collection, addDoc, serverTimestamp, query, orderBy, onSnapshot } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+    import { initializeFirestore, collection, addDoc, serverTimestamp, query, orderBy, onSnapshot, doc, getDoc } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyAc1gkFe9GXrdLulzKWniX0bTYL-ITLQsg",
@@ -540,11 +540,11 @@
 
     function formatTimestamp(ts) {
       try {
-        if (!ts) return '';
+        if (!ts) return new Date().toLocaleString(); // Fallback to current time
         const d = ts.toDate ? ts.toDate() : new Date(ts);
         return d.toLocaleString();
       } catch (_) {
-        return '';
+        return new Date().toLocaleString(); // Fallback to current time
       }
     }
 
@@ -665,6 +665,8 @@
     // Real-time feed (ordered oldest -> newest)
     const q = query(collection(db, 'messages'), orderBy('createdAt', 'asc'));
     let messageElements = new Map(); // Track existing messages to avoid recreating
+    let leftCount = 0, rightCount = 0; // Track left/right distribution
+    let totalMessageCount = 0; // Track total messages for delay calculation
     const MAX_VISIBLE_MESSAGES = 20; // Limit visible messages to prevent overlap
     
     onSnapshot(q, { includeMetadataChanges: true }, (snapshot) => {
@@ -679,64 +681,135 @@
       // Sort by creation time and take only the most recent
       const recentMessages = allMessages.slice(-MAX_VISIBLE_MESSAGES);
       
-      // Clear feed and rebuild with limited messages
-      feed.innerHTML = '';
-      messageElements.clear();
-      
+      // Only add new messages, don't rebuild everything
       recentMessages.forEach((message, index) => {
-        const data = message.data;
-        const node = template.content.cloneNode(true);
-        node.querySelector('.message-text').textContent = data.text || '';
-        node.querySelector('.message-time').textContent = formatTimestamp(data.createdAt);
-        
-        // Add staggered delay for carousel effect
-        const bubble = node.querySelector('.message-bubble');
-        const delay = (index * 0.8) % 30; // Increased stagger to prevent overlap
-        bubble.style.animationDelay = `${delay}s`;
-        
-        // Ensure proper initial positioning to prevent stuck bubbles
-        if (index % 2 === 0) {
-          // Even messages (going up) start from bottom
-          bubble.style.transform = 'translateY(100vh)';
-        } else {
-          // Odd messages (going down) start from top
-          bubble.style.transform = 'translateY(-100vh)';
-        }
-        
-        // Add click handler for comments
-        bubble.setAttribute('data-message-id', message.id);
-        bubble.style.cursor = 'pointer';
-        bubble.style.pointerEvents = 'auto';
-        bubble.title = 'Click to add comments';
-        
-        bubble.addEventListener('click', (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          console.log('Bubble clicked:', message.id); // Debug log
-            
-          // Add visual feedback
-          bubble.style.transform = 'scale(0.95)';
-          bubble.style.transition = 'transform 0.1s ease';
-            
-          setTimeout(() => {
+        if (!messageElements.has(message.id)) {
+          const data = message.data;
+          const node = template.content.cloneNode(true);
+          node.querySelector('.message-text').textContent = data.text || '';
+          
+          // Ensure timestamp is always displayed, even for new messages
+          const timestamp = data.createdAt || new Date();
+          node.querySelector('.message-time').textContent = formatTimestamp(timestamp);
+          
+          const bubble = node.querySelector('.message-bubble');
+          
+          // Balance left/right distribution
+          let isLeft = leftCount <= rightCount;
+          if (isLeft) {
+            leftCount++;
+            bubble.style.left = '5%';
+            bubble.style.right = 'auto';
+            // Choose animation based on left count
+            const animations = ['carouselUp', 'carouselUpSlow'];
+            const animation = animations[leftCount % 2];
+            const speeds = [15, 22];
+            const speed = speeds[leftCount % 2];
+            bubble.style.animation = `${animation} ${speed}s linear infinite`;
+          } else {
+            rightCount++;
+            bubble.style.right = '5%';
+            bubble.style.left = 'auto';
+            // Choose animation based on right count
+            const animations = ['carouselDown', 'carouselDownSlow'];
+            const animation = animations[rightCount % 2];
+            const speeds = [18, 25];
+            const speed = speeds[rightCount % 2];
+            bubble.style.animation = `${animation} ${speed}s linear infinite`;
+          }
+          
+          // Add proper delay to prevent overlapping
+          const delay = totalMessageCount * 1.2; // 1.2 seconds between each message
+          bubble.style.animationDelay = `${delay}s`;
+          
+          // Set initial position based on direction
+          if (isLeft) {
+            bubble.style.transform = 'translateY(100vh)';
+          } else {
+            bubble.style.transform = 'translateY(-100vh)';
+          }
+          
+          totalMessageCount++;
+          
+          // Add click handler for comments
+          bubble.setAttribute('data-message-id', message.id);
+          bubble.style.cursor = 'pointer';
+          bubble.style.pointerEvents = 'auto';
+          bubble.title = 'Click to add comments';
+          
+          bubble.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('Bubble clicked:', message.id); // Debug log
+              
+            // Add visual feedback
+            bubble.style.transform = 'scale(0.95)';
+            bubble.style.transition = 'transform 0.1s ease';
+              
+            setTimeout(() => {
+              bubble.style.transform = '';
+              openCommentPanel(message.id, data.text || '');
+            }, 100);
+          });
+          
+          // Add hover effect for better UX
+          bubble.addEventListener('mouseenter', () => {
+            bubble.style.transform = 'scale(1.02)';
+            bubble.style.transition = 'transform 0.2s ease';
+          });
+          
+          bubble.addEventListener('mouseleave', () => {
             bubble.style.transform = '';
-            openCommentPanel(message.id, data.text || '');
-          }, 100);
-        });
-        
-        // Add hover effect for better UX
-        bubble.addEventListener('mouseenter', () => {
-          bubble.style.transform = 'scale(1.02)';
-          bubble.style.transition = 'transform 0.2s ease';
-        });
-        
-        bubble.addEventListener('mouseleave', () => {
-          bubble.style.transform = '';
-        });
-        
-        feed.appendChild(node);
-        messageElements.set(message.id, node);
+          });
+          
+          feed.appendChild(node);
+          messageElements.set(message.id, node);
+          
+          // Update timestamp when server timestamp resolves (for new messages)
+          if (!data.createdAt) {
+            // Check again after a short delay for server timestamp to resolve
+            setTimeout(() => {
+              const updatedElement = messageElements.get(message.id);
+              if (updatedElement) {
+                const timeElement = updatedElement.querySelector('.message-time');
+                if (timeElement && timeElement.textContent === new Date().toLocaleString()) {
+                  // Re-query the message to get the resolved timestamp
+                  const messageRef = doc(db, 'messages', message.id);
+                  getDoc(messageRef).then((docSnap) => {
+                    if (docSnap.exists()) {
+                      const updatedData = docSnap.data();
+                      if (updatedData.createdAt) {
+                        timeElement.textContent = formatTimestamp(updatedData.createdAt);
+                      }
+                    }
+                  });
+                }
+              }
+            }, 1000); // Wait 1 second for server timestamp to resolve
+          }
+        }
       });
+      
+      // Remove old messages if we exceed the limit
+      if (messageElements.size > MAX_VISIBLE_MESSAGES) {
+        const messageIds = Array.from(messageElements.keys());
+        const messagesToRemove = messageIds.slice(0, messageElements.size - MAX_VISIBLE_MESSAGES);
+        
+        messagesToRemove.forEach(id => {
+          const element = messageElements.get(id);
+          if (element) {
+            element.remove();
+            messageElements.delete(id);
+            // Adjust counters when removing messages
+            if (element.querySelector('.message-bubble').style.left === '5%') {
+              leftCount = Math.max(0, leftCount - 1);
+            } else {
+              rightCount = Math.max(0, rightCount - 1);
+            }
+            totalMessageCount = Math.max(0, totalMessageCount - 1);
+          }
+        });
+      }
     }, (error) => {
       console.error('Realtime listener error:', error);
     });
