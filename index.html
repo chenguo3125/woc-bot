@@ -1,11 +1,100 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="en">
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>微信小窗口示例</title>
-<body style="font-family:sans-serif;padding:20px;text-align:center">
-  <h2>你好，微信用户 👋</h2>
-  <p>这是一个托管在 Vercel 的网页。</p>
-  <button onclick="alert('你点到了按钮！')">点我一下</button>
+<title>OMG Wall — Anonymous Shared Messages</title>
+<body style="font-family:sans-serif;padding:20px;max-width:720px;margin:0 auto;line-height:1.4">
+  <h2 style="margin:0 0 8px">OMG Wall</h2>
+  <p style="margin:0 0 20px;color:#555">A totally anonymous, real-time message board. No login. Messages persist.</p>
+
+  <form id="msg-form" style="display:flex;gap:8px;align-items:center;margin-bottom:16px">
+    <div style="display:flex;align-items:center;border:1px solid #ddd;border-radius:8px;padding:8px 10px;flex:1;background:#fff">
+      <span aria-hidden="true" style="font-weight:600;color:#d00;margin-right:6px;white-space:nowrap">OMG</span>
+      <input id="msg-input" type="text" autocomplete="off" placeholder="Type your message…"
+        style="border:0;outline:0;flex:1;font-size:16px" />
+    </div>
+    <button id="send-btn" type="submit" style="background:#111;color:#fff;border:0;border-radius:8px;padding:10px 14px;font-weight:600;cursor:pointer">Send</button>
+  </form>
+
+  <div id="feed" aria-live="polite" aria-busy="true" style="display:flex;flex-direction:column;gap:10px"></div>
+
+  <template id="msg-item-template">
+    <div style="border:1px solid #eee;border-radius:10px;padding:10px 12px;background:#fafafa">
+      <div class="text" style="white-space:pre-wrap;word-wrap:break-word"></div>
+      <div class="meta" style="color:#888;font-size:12px;margin-top:6px"></div>
+    </div>
+  </template>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+    import { getFirestore, collection, addDoc, serverTimestamp, query, orderBy, onSnapshot } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyAc1gkFe9GXrdLulzKWniX0bTYL-ITLQsg",
+      authDomain: "woc-bot-70dfc.firebaseapp.com",
+      projectId: "woc-bot-70dfc",
+      storageBucket: "woc-bot-70dfc.firebasestorage.app",
+      messagingSenderId: "132604996957",
+      appId: "1:132604996957:web:23a5fe49821e0b393e4cb4"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    const form = document.getElementById('msg-form');
+    const input = document.getElementById('msg-input');
+    const feed = document.getElementById('feed');
+    const template = document.getElementById('msg-item-template');
+    const sendBtn = document.getElementById('send-btn');
+
+    function formatTimestamp(ts) {
+      try {
+        if (!ts) return '';
+        const d = ts.toDate ? ts.toDate() : new Date(ts);
+        return d.toLocaleString();
+      } catch (_) {
+        return '';
+      }
+    }
+
+    async function sendMessage(ev) {
+      ev.preventDefault();
+      const raw = (input.value || '').trim();
+      if (!raw) return;
+      const text = `OMG ${raw}`;
+      input.disabled = true;
+      sendBtn.disabled = true;
+      try {
+        await addDoc(collection(db, 'messages'), {
+          text,
+          createdAt: serverTimestamp()
+        });
+        input.value = '';
+      } catch (err) {
+        alert('Failed to send. Please try again.');
+        // Intentionally not collecting any identifiers to preserve anonymity
+      } finally {
+        input.disabled = false;
+        sendBtn.disabled = false;
+        input.focus();
+      }
+    }
+
+    form.addEventListener('submit', sendMessage);
+
+    // Real-time feed (ordered oldest -> newest)
+    const q = query(collection(db, 'messages'), orderBy('createdAt', 'asc'));
+    onSnapshot(q, (snapshot) => {
+      feed.setAttribute('aria-busy', 'false');
+      feed.innerHTML = '';
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        const node = template.content.cloneNode(true);
+        node.querySelector('.text').textContent = data.text || '';
+        node.querySelector('.meta').textContent = formatTimestamp(data.createdAt);
+        feed.appendChild(node);
+      });
+    });
+  </script>
 </body>
 </html>
