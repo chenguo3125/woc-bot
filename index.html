@@ -27,7 +27,7 @@
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
-    import { getFirestore, collection, addDoc, serverTimestamp, query, orderBy, onSnapshot } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+    import { initializeFirestore, collection, addDoc, serverTimestamp, query, orderBy, onSnapshot } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyAc1gkFe9GXrdLulzKWniX0bTYL-ITLQsg",
@@ -39,7 +39,8 @@
     };
 
     const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
+    // Improve realtime reliability in restricted networks by auto-detecting long polling
+    const db = initializeFirestore(app, { experimentalAutoDetectLongPolling: true });
 
     const form = document.getElementById('msg-form');
     const input = document.getElementById('msg-input');
@@ -73,6 +74,7 @@
       } catch (err) {
         alert('Failed to send. Please try again.');
         // Intentionally not collecting any identifiers to preserve anonymity
+        console.error(err);
       } finally {
         input.disabled = false;
         sendBtn.disabled = false;
@@ -84,7 +86,7 @@
 
     // Real-time feed (ordered oldest -> newest)
     const q = query(collection(db, 'messages'), orderBy('createdAt', 'asc'));
-    onSnapshot(q, (snapshot) => {
+    onSnapshot(q, { includeMetadataChanges: true }, (snapshot) => {
       feed.setAttribute('aria-busy', 'false');
       feed.innerHTML = '';
       snapshot.forEach((doc) => {
@@ -94,6 +96,8 @@
         node.querySelector('.meta').textContent = formatTimestamp(data.createdAt);
         feed.appendChild(node);
       });
+    }, (error) => {
+      console.error('Realtime listener error:', error);
     });
   </script>
 </body>
