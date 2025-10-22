@@ -40,6 +40,11 @@
     box-shadow: 0 4px 12px rgba(0,0,0,0.15);
   }
   
+  .message-bubble:active {
+    transform: scale(0.98);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  }
+  
   .message-bubble:nth-child(odd) {
     background: white;
     color: #333;
@@ -202,6 +207,10 @@
     height: 100%;
   }
   
+  .message-bubble {
+    pointer-events: auto;
+  }
+  
   .header {
     text-align: center;
     padding: 20px;
@@ -228,10 +237,190 @@
     margin: 0;
     font-family: sans-serif;
   }
+  
+  .comment-panel {
+    position: fixed;
+    top: 0;
+    right: -400px;
+    width: 400px;
+    height: 100vh;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px);
+    box-shadow: -8px 0 32px rgba(0,0,0,0.15);
+    transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 2000;
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .comment-panel.open {
+    right: 0;
+  }
+  
+  .comment-header {
+    padding: 20px;
+    border-bottom: 1px solid rgba(0,0,0,0.1);
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+  }
+  
+  .comment-header h3 {
+    margin: 0 0 12px;
+    font-size: 14px;
+    font-weight: 600;
+    opacity: 0.8;
+  }
+  
+  .comment-header p {
+    margin: 0;
+    opacity: 1;
+    font-size: 16px;
+    font-weight: 500;
+    line-height: 1.4;
+    background: rgba(255,255,255,0.1);
+    padding: 8px 12px;
+    border-radius: 8px;
+    border-left: 3px solid rgba(255,255,255,0.3);
+  }
+  
+  .close-btn {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    background: rgba(255,255,255,0.2);
+    border: none;
+    color: white;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s ease;
+    z-index: 2001;
+    pointer-events: auto;
+  }
+  
+  .close-btn:hover {
+    background: rgba(255,255,255,0.3);
+  }
+  
+  .close-btn:active {
+    background: rgba(255,255,255,0.4);
+    transform: scale(0.95);
+  }
+  
+  .comment-input-section {
+    padding: 20px;
+    border-bottom: 1px solid rgba(0,0,0,0.1);
+  }
+  
+  .comment-input-wrapper {
+    display: flex;
+    align-items: center;
+    border: 2px solid rgba(102, 126, 234, 0.3);
+    border-radius: 20px;
+    padding: 12px 16px;
+    background: rgba(255, 255, 255, 0.9);
+    transition: all 0.3s ease;
+  }
+  
+  .comment-input-wrapper:focus-within {
+    border-color: #667eea;
+    box-shadow: 0 4px 16px rgba(102, 126, 234, 0.2);
+  }
+  
+  .comment-prefix {
+    font-weight: 700;
+    color: #d00;
+    margin-right: 8px;
+    white-space: nowrap;
+    font-size: 14px;
+  }
+  
+  .comment-input {
+    border: 0;
+    outline: 0;
+    flex: 1;
+    font-size: 14px;
+    background: transparent;
+    color: #333;
+  }
+  
+  .comment-send-btn {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: 0;
+    border-radius: 15px;
+    padding: 8px 16px;
+    font-weight: 600;
+    font-size: 12px;
+    cursor: pointer;
+    margin-left: 8px;
+    transition: all 0.2s ease;
+  }
+  
+  .comment-send-btn:hover {
+    transform: scale(1.05);
+  }
+  
+  .comment-send-btn:disabled {
+    opacity: 0.6;
+    transform: none;
+  }
+  
+  .comments-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+  }
+  
+  .comment-item {
+    background: rgba(255, 255, 255, 0.8);
+    border-radius: 12px;
+    padding: 12px;
+    margin-bottom: 12px;
+    border: 1px solid rgba(0,0,0,0.1);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  }
+  
+  .comment-text {
+    font-size: 14px;
+    line-height: 1.4;
+    margin-bottom: 6px;
+    color: #333;
+  }
+  
+  .comment-time {
+    font-size: 11px;
+    color: #888;
+    opacity: 0.8;
+  }
+  
+  .panel-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.3);
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+    z-index: 1500;
+  }
+  
+  .panel-overlay.open {
+    opacity: 1;
+    visibility: visible;
+  }
 </style>
 <body>
   <div class="header">
     <h2>卧槽bot</h2>
+    <p>完全匿名，全天运行；无需登录，名垂千古。</p>
     <p>A totally anonymous, real-time message board. No login. Messages persist.</p>
   </div>
 
@@ -245,14 +434,44 @@
         <span class="omg-prefix" aria-hidden="true">卧槽</span>
         <input id="msg-input" type="text" autocomplete="off" placeholder="我跟你说…" class="message-input" />
       </div>
-      <button id="send-btn" type="submit" class="send-button">Send</button>
+      <button id="send-btn" type="submit" class="send-button">发送</button>
     </form>
   </div>
 
   <template id="msg-item-template">
-    <div class="message-bubble">
+    <div class="message-bubble" data-message-id="">
       <div class="message-text"></div>
       <div class="message-time"></div>
+    </div>
+  </template>
+
+  <div class="panel-overlay" id="panel-overlay"></div>
+  
+  <div class="comment-panel" id="comment-panel">
+    <div class="comment-header">
+      <button class="close-btn" id="close-panel">×</button>
+      <h3 id="comment-title">comments</h3>
+      <p id="comment-subtitle">Share your thoughts</p>
+    </div>
+    
+    <div class="comment-input-section">
+      <form id="comment-form">
+        <div class="comment-input-wrapper">
+          <input id="comment-input" type="text" autocomplete="off" placeholder="唠两句..." class="comment-input" />
+          <button id="comment-send-btn" type="submit" class="comment-send-btn">发送</button>
+        </div>
+      </form>
+    </div>
+    
+    <div class="comments-list" id="comments-list">
+      <!-- Comments will be loaded here -->
+    </div>
+  </div>
+
+  <template id="comment-item-template">
+    <div class="comment-item">
+      <div class="comment-text"></div>
+      <div class="comment-time"></div>
     </div>
   </template>
 
@@ -278,6 +497,20 @@
     const feed = document.getElementById('feed');
     const template = document.getElementById('msg-item-template');
     const sendBtn = document.getElementById('send-btn');
+    
+    // Comment panel elements
+    const commentPanel = document.getElementById('comment-panel');
+    const panelOverlay = document.getElementById('panel-overlay');
+    const closePanelBtn = document.getElementById('close-panel');
+    const commentForm = document.getElementById('comment-form');
+    const commentInput = document.getElementById('comment-input');
+    const commentSendBtn = document.getElementById('comment-send-btn');
+    const commentsList = document.getElementById('comments-list');
+    const commentTemplate = document.getElementById('comment-item-template');
+    const commentTitle = document.getElementById('comment-title');
+    const commentSubtitle = document.getElementById('comment-subtitle');
+    
+    let currentMessageId = null;
 
     function formatTimestamp(ts) {
       try {
@@ -315,6 +548,94 @@
 
     form.addEventListener('submit', sendMessage);
 
+    // Comment panel functions
+    function openCommentPanel(messageId, messageText) {
+      currentMessageId = messageId;
+      commentTitle.textContent = '0 条评论'; // Initial state
+      commentSubtitle.textContent = `"${messageText.substring(0, 50)}${messageText.length > 50 ? '...' : ''}"`;
+      commentPanel.classList.add('open');
+      panelOverlay.classList.add('open');
+      loadComments(messageId);
+      commentInput.focus();
+    }
+
+    function closeCommentPanel() {
+      console.log('closeCommentPanel called'); // Debug log
+      commentPanel.classList.remove('open');
+      panelOverlay.classList.remove('open');
+      currentMessageId = null;
+      commentInput.value = '';
+    }
+
+    async function sendComment(ev) {
+      ev.preventDefault();
+      const raw = (commentInput.value || '').trim();
+      if (!raw || !currentMessageId) return;
+      
+      const text = raw; // No prefix for comments
+      commentInput.disabled = true;
+      commentSendBtn.disabled = true;
+      
+      try {
+        await addDoc(collection(db, 'comments'), {
+          messageId: currentMessageId,
+          text,
+          createdAt: serverTimestamp()
+        });
+        commentInput.value = '';
+      } catch (err) {
+        alert('Failed to send comment. Please try again.');
+        console.error(err);
+      } finally {
+        commentInput.disabled = false;
+        commentSendBtn.disabled = false;
+        commentInput.focus();
+      }
+    }
+
+    function loadComments(messageId) {
+      const q = query(
+        collection(db, 'comments'), 
+        orderBy('createdAt', 'asc')
+      );
+      
+      onSnapshot(q, (snapshot) => {
+        commentsList.innerHTML = '';
+        let commentCount = 0;
+        
+        snapshot.forEach((doc) => {
+          const data = doc.data();
+          if (data.messageId === messageId) {
+            commentCount++;
+            const node = commentTemplate.content.cloneNode(true);
+            node.querySelector('.comment-text').textContent = data.text || '';
+            node.querySelector('.comment-time').textContent = formatTimestamp(data.createdAt);
+            commentsList.appendChild(node);
+          }
+        });
+        
+        // Update the comment count in the header
+        const countText = commentCount === 1 ? '1 Comment' : `${commentCount} 条评论`;
+        commentTitle.textContent = countText;
+      }, (error) => {
+        console.error('Comments listener error:', error);
+      });
+    }
+
+    // Event listeners
+    closePanelBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      console.log('Close button clicked'); // Debug log
+      closeCommentPanel();
+    });
+    panelOverlay.addEventListener('click', (e) => {
+      e.preventDefault();
+      console.log('Overlay clicked'); // Debug log
+      closeCommentPanel();
+    });
+    commentForm.addEventListener('submit', sendComment);
+
     // Real-time feed (ordered oldest -> newest)
     const q = query(collection(db, 'messages'), orderBy('createdAt', 'asc'));
     onSnapshot(q, { includeMetadataChanges: true }, (snapshot) => {
@@ -330,6 +651,37 @@
         const bubble = node.querySelector('.message-bubble');
         const delay = (index * 0.5) % 20; // Stagger messages by 0.5s, cycle every 20s
         bubble.style.animationDelay = `0.6s, ${delay}s`;
+        
+        // Add click handler for comments
+        bubble.setAttribute('data-message-id', doc.id);
+        bubble.style.cursor = 'pointer';
+        bubble.style.pointerEvents = 'auto';
+        bubble.title = 'Click to add comments';
+        
+        bubble.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          console.log('Bubble clicked:', doc.id); // Debug log
+          
+          // Add visual feedback
+          bubble.style.transform = 'scale(0.95)';
+          bubble.style.transition = 'transform 0.1s ease';
+          
+          setTimeout(() => {
+            bubble.style.transform = '';
+            openCommentPanel(doc.id, data.text || '');
+          }, 100);
+        });
+        
+        // Add hover effect for better UX
+        bubble.addEventListener('mouseenter', () => {
+          bubble.style.transform = 'scale(1.02)';
+          bubble.style.transition = 'transform 0.2s ease';
+        });
+        
+        bubble.addEventListener('mouseleave', () => {
+          bubble.style.transform = '';
+        });
         
         feed.appendChild(node);
       });
