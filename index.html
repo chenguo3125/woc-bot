@@ -11,23 +11,31 @@
   }
   
   @keyframes carouselUp {
-    0% { transform: translateY(100vh); }
-    100% { transform: translateY(-100vh); }
+    0% { transform: translateY(100vh); opacity: 0; }
+    5% { opacity: 1; }
+    95% { opacity: 1; }
+    100% { transform: translateY(-100vh); opacity: 0; }
   }
   
   @keyframes carouselDown {
-    0% { transform: translateY(-100vh); }
-    100% { transform: translateY(100vh); }
+    0% { transform: translateY(-100vh); opacity: 0; }
+    5% { opacity: 1; }
+    95% { opacity: 1; }
+    100% { transform: translateY(100vh); opacity: 0; }
   }
   
   @keyframes carouselUpSlow {
-    0% { transform: translateY(100vh); }
-    100% { transform: translateY(-100vh); }
+    0% { transform: translateY(100vh); opacity: 0; }
+    5% { opacity: 1; }
+    95% { opacity: 1; }
+    100% { transform: translateY(-100vh); opacity: 0; }
   }
   
   @keyframes carouselDownSlow {
-    0% { transform: translateY(-100vh); }
-    100% { transform: translateY(100vh); }
+    0% { transform: translateY(-100vh); opacity: 0; }
+    5% { opacity: 1; }
+    95% { opacity: 1; }
+    100% { transform: translateY(100vh); opacity: 0; }
   }
   
   .message-bubble {
@@ -683,8 +691,17 @@
         
         // Add staggered delay for carousel effect
         const bubble = node.querySelector('.message-bubble');
-        const delay = (index * 0.5) % 30; // Increased stagger to prevent overlap
+        const delay = (index * 0.8) % 30; // Increased stagger to prevent overlap
         bubble.style.animationDelay = `${delay}s`;
+        
+        // Ensure proper initial positioning to prevent stuck bubbles
+        if (index % 2 === 0) {
+          // Even messages (going up) start from bottom
+          bubble.style.transform = 'translateY(100vh)';
+        } else {
+          // Odd messages (going down) start from top
+          bubble.style.transform = 'translateY(-100vh)';
+        }
         
         // Add click handler for comments
         bubble.setAttribute('data-message-id', message.id);
